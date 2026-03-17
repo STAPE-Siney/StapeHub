@@ -1,6 +1,6 @@
 -- [[ STAPE HUB - UNIVERSAL V2.5 ]]
 -- Credits: Created by SINEY
--- UPDATED: NEW API SYSTEM (RENDER) + AUTO-WAKEUP + HWID LOCK
+-- UPDATED: NEW API SYSTEM (RAILWAY) + AUTO-WAKEUP + HWID LOCK
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -9,8 +9,8 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- [[ CONFIGURATION API RENDER ]]
-local api_url = "https://stapebackend.onrender.com" -- ⚠️ METS TON LIEN ICI
+-- [[ CONFIGURATION API ]]
+local api_url = "https://TON_LIEN_RAILWAY_ICI.up.railway.app/check" -- ⚠️ METS TON LIEN RAILWAY ICI
 local FILE_NAME = "stape_config.json"
 
 -- [[ RÉCUPÉRATION DU HWID ]]
@@ -245,13 +245,13 @@ local function StartCheat(expiration)
     UserInputService.InputBegan:Connect(function(i) if i.KeyCode == Enum.KeyCode.Insert then Main.Visible = not Main.Visible end end)
 end
 
--- [[ LOGIQUE DE VÉRIFICATION UNIFIÉE (RENDER) ]]
+-- [[ LOGIQUE DE VÉRIFICATION UNIFIÉE (RAILWAY) ]]
 local function CheckAccess(inputKey, isAuto)
     if not isAuto then LoginBtn.Text = "Vérification..." end
     
     local full_url = api_url .. "?key=" .. inputKey .. "&hwid=" .. HWID
     local attempts = 0
-    local max_attempts = 3
+    local max_attempts = 2 -- Railway est instantané, pas besoin de bcp d'essais
     
     while attempts < max_attempts do
         local success, response = pcall(function()
@@ -261,7 +261,7 @@ local function CheckAccess(inputKey, isAuto)
         if success then
             if response == "success" then
                 if not isAuto then SaveKeyLocal(inputKey) end
-                StartCheat(9999999999) -- On lance avec accès complet
+                StartCheat(9999999999) 
                 return
             elseif response == "mismatch" then
                 if not isAuto then LoginBtn.Text = "PC NON AUTORISÉ !" end
@@ -274,8 +274,7 @@ local function CheckAccess(inputKey, isAuto)
         end
         
         attempts = attempts + 1
-        if not isAuto then LoginBtn.Text = "Réveil serveur... ("..attempts..")" end
-        task.wait(4)
+        task.wait(2)
     end
     
     if not isAuto then LoginBtn.Text = "SERVEUR OFFLINE" end
