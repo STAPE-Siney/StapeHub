@@ -1,6 +1,6 @@
 -- [[ STAPE HUB - UNIVERSAL V2.5 ]]
 -- Credits: Created by SINEY
--- UPDATED: ZQSD Controls + Mouse Camera Movement + GITHUB KEY SYSTEM (FIXED) + HWID PROTECTION
+-- UPDATED: NEW API SYSTEM (RENDER) + AUTO-WAKEUP + HWID LOCK
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -9,31 +9,25 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- [[ CONFIGURATION GITHUB ]]
-local JSON_URL = "https://raw.githubusercontent.com/STAPE-Siney/StapeHub/main/keys.json"
-local FILE_NAME = "stape_config.json" -- Fichier de sauvegarde locale
+-- [[ CONFIGURATION API RENDER ]]
+local api_url = "https://TON-LIEN-ICI.onrender.com/check" -- ⚠️ METS TON LIEN ICI
+local FILE_NAME = "stape_config.json"
 
 -- [[ RÉCUPÉRATION DU HWID ]]
 local HWID = game:GetService("RbxAnalyticsService"):GetClientId()
 
 -- [[ FONCTIONS DE SAUVEGARDE ]]
 local function SaveKeyLocal(key)
-    local data = {
-        key = key,
-        ownerID = LocalPlayer.UserId,
-        hwid = HWID -- AJOUT DU HWID DANS LA SAUVEGARDE
-    }
+    local data = {key = key}
     writefile(FILE_NAME, HttpService:JSONEncode(data))
 end
 
 local function GetSavedKey()
     if isfile(FILE_NAME) then
         local success, data = pcall(function() return HttpService:JSONDecode(readfile(FILE_NAME)) end)
-        if success then 
-            return data.key, data.ownerID, data.hwid -- RETOURNE AUSSI LE HWID
-        end
+        if success then return data.key end
     end
-    return nil, nil, nil
+    return nil
 end
 
 -- [[ UI DE CONNEXION ]]
@@ -53,7 +47,7 @@ KeyInput.Size = UDim2.new(0, 240, 0, 35); KeyInput.Position = UDim2.new(0.5, -12
 local LoginBtn = Instance.new("TextButton", LoginFrame)
 LoginBtn.Size = UDim2.new(0, 240, 0, 35); LoginBtn.Position = UDim2.new(0.5, -120, 0.7, 0); LoginBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 200); LoginBtn.Text = "VÉRIFIER"; LoginBtn.TextColor3 = Color3.new(1,1,1); LoginBtn.Font = "GothamBold"; Instance.new("UICorner", LoginBtn)
 
--- [[ FONCTION AURA RARE (LIFETIME) ]]
+-- [[ FONCTION AURA RARE ]]
 local function ApplyRareAura(char)
     local part = char:WaitForChild("HumanoidRootPart")
     local aura = Instance.new("ParticleEmitter")
@@ -72,13 +66,11 @@ local function StartCheat(expiration)
     if LoginGui then LoginGui:Destroy() end
     print("Access Granted! Welcome, " .. LocalPlayer.Name)
 
-    -- Si clé Lifetime (9999999999), on met l'aura
     if expiration == 9999999999 then
         LocalPlayer.CharacterAdded:Connect(ApplyRareAura)
         if LocalPlayer.Character then ApplyRareAura(LocalPlayer.Character) end
     end
 
-    -- [ TOUTE TA CONFIGURATION ORIGINALE CI-DESSOUS ]
     _G.Aimbot = false; _G.TeamCheck = false; _G.VisibleCheck = true; _G.Prediction = 0.165
     _G.FOV_Visible = true; _G.FOV_Radius = 150; _G.Aimbot_Smoothing = 0.4
     _G.ESP_Enabled = false; _G.ESP_Skeleton = false; _G.ESP_Box = false; _G.Trackers_Enabled = false
@@ -253,60 +245,53 @@ local function StartCheat(expiration)
     UserInputService.InputBegan:Connect(function(i) if i.KeyCode == Enum.KeyCode.Insert then Main.Visible = not Main.Visible end end)
 end
 
--- [[ LOGIQUE DE VÉRIFICATION UNIFIÉE (AUTO + MANUEL) ]]
+-- [[ LOGIQUE DE VÉRIFICATION UNIFIÉE (RENDER) ]]
 local function CheckAccess(inputKey, isAuto)
-    local success, response = pcall(function() 
-        return game:HttpGet(JSON_URL .. "?nocache=" .. os.time()) 
-    end)
+    if not isAuto then LoginBtn.Text = "Vérification..." end
     
-    if success then
-        local decodeSuccess, data = pcall(function() return HttpService:JSONDecode(response) end)
-        if decodeSuccess and data[inputKey] then
-            local exp = data[inputKey]
-            local savedKey, savedID, savedHWID = GetSavedKey()
-
-            -- BLINDAGE HWID : Si le HWID ne correspond pas à celui enregistré lors de la première utilisation
-            if savedKey == inputKey and savedHWID and savedHWID ~= HWID then
-                if not isAuto then LoginBtn.Text = "PC NON AUTORISÉ !" end
-                warn("ACCÈS REFUSÉ : HWID différent détecté.")
-                return
-            end
-
-            -- Anti-Share par UserId
-            if savedKey == inputKey and savedID and savedID ~= LocalPlayer.UserId then
-                if not isAuto then LoginBtn.Text = "PAS TON COMPTE !" end
-                return
-            end
-
-            -- Expiration
-            if exp == 9999999999 or os.time() < exp then
+    local full_url = api_url .. "?key=" .. inputKey .. "&hwid=" .. HWID
+    local attempts = 0
+    local max_attempts = 3
+    
+    while attempts < max_attempts do
+        local success, response = pcall(function()
+            return game:HttpGet(full_url)
+        end)
+        
+        if success then
+            if response == "success" then
                 if not isAuto then SaveKeyLocal(inputKey) end
-                StartCheat(exp)
-            else
+                StartCheat(9999999999) -- On lance avec accès complet
+                return
+            elseif response == "mismatch" then
+                if not isAuto then LoginBtn.Text = "PC NON AUTORISÉ !" end
+                return
+            elseif response == "invalid" then
+                if not isAuto then LoginBtn.Text = "CLÉ INVALIDE !" end
                 if isfile(FILE_NAME) then delfile(FILE_NAME) end
-                if not isAuto then LoginBtn.Text = "EXPIRÉE!" end
+                return
             end
-        else
-            if not isAuto then LoginBtn.Text = "CLÉ INVALIDE!" end
         end
-    else
-        if not isAuto then LoginBtn.Text = "GITHUB ERROR!" end
+        
+        attempts = attempts + 1
+        if not isAuto then LoginBtn.Text = "Réveil serveur... ("..attempts..")" end
+        task.wait(4)
     end
+    
+    if not isAuto then LoginBtn.Text = "SERVEUR OFFLINE" end
 end
 
--- [[ LANCEMENT AUTOMATIQUE ]]
-local sKey, sID, sHWID = GetSavedKey()
-if sKey then
-    task.spawn(function() CheckAccess(sKey, true) end)
+-- [[ LANCEMENT ]]
+local savedKey = GetSavedKey()
+if savedKey then
+    task.spawn(function() CheckAccess(savedKey, true) end)
 end
 
--- [[ BOUTON LOGIN MANUEL ]]
 LoginBtn.MouseButton1Click:Connect(function()
     local inputKey = KeyInput.Text:gsub("%s+", "") 
     if inputKey == "" then
         LoginBtn.Text = "ENTREZ UNE CLÉ !"; wait(2); LoginBtn.Text = "VÉRIFIER"
         return
     end
-    LoginBtn.Text = "Vérification..."
     CheckAccess(inputKey, false)
 end)
