@@ -10,7 +10,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 -- [[ CONFIGURATION API ]]
-local api_url = "https://TON_LIEN_RAILWAY_ICI.up.railway.app/check" -- ⚠️ METS TON LIEN RAILWAY ICI
+local api_url = "https://stapebackend-production.up.railway.app/check" -- ⚠️ METS TON LIEN RAILWAY ICI
 local FILE_NAME = "stape_config.json"
 
 -- [[ RÉCUPÉRATION DU HWID ]]
