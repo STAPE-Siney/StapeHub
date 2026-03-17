@@ -10,7 +10,7 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
 -- [[ CONFIGURATION API RENDER ]]
-local api_url = "https://TON-LIEN-ICI.onrender.com/check" -- ⚠️ METS TON LIEN ICI
+local api_url = "https://stapebackend.onrender.com" -- ⚠️ METS TON LIEN ICI
 local FILE_NAME = "stape_config.json"
 
 -- [[ RÉCUPÉRATION DU HWID ]]
