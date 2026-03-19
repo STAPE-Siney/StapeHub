@@ -1,6 +1,6 @@
 -- [[ STAPE HUB - UNIVERSAL V2.5 ]]
 -- Credits: Created by SINEY
--- UPDATED: NEW API SYSTEM (RAILWAY) + AUTO-WAKEUP + HWID LOCK + AUTO-FARM + AUTO-QUEST
+-- UPDATED: NEW API SYSTEM (RAILWAY) + AUTO-WAKEUP + HWID LOCK + AUTO-FARM + AUTO-QUEST (STRICT)
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -48,19 +48,6 @@ KeyInput.Size = UDim2.new(0, 240, 0, 35); KeyInput.Position = UDim2.new(0.5, -12
 local LoginBtn = Instance.new("TextButton", LoginFrame)
 LoginBtn.Size = UDim2.new(0, 240, 0, 35); LoginBtn.Position = UDim2.new(0.5, -120, 0.7, 0); LoginBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 200); LoginBtn.Text = "VÉRIFIER"; LoginBtn.TextColor3 = Color3.new(1,1,1); LoginBtn.Font = "GothamBold"; Instance.new("UICorner", LoginBtn)
 
--- [[ FONCTION AURA RARE ]]
-local function ApplyRareAura(char)
-    local part = char:WaitForChild("HumanoidRootPart")
-    local aura = Instance.new("ParticleEmitter")
-    aura.Name = "StapeRareAura"
-    aura.Color = ColorSequence.new(Color3.fromRGB(150, 0, 255), Color3.fromRGB(50, 0, 100))
-    aura.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 2.5), NumberSequenceKeypoint.new(1, 0)})
-    aura.Texture = "rbxassetid://6073700091" 
-    aura.Lifetime = NumberRange.new(0.8, 1.5); aura.Rate = 45
-    aura.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1)})
-    aura.Parent = part
-end
-
 -- [[ LANCEMENT DU CHEAT ]]
 local function StartCheat(expiration)
     if LoginGui then LoginGui:Destroy() end
@@ -75,7 +62,7 @@ local function StartCheat(expiration)
 
     -- Variables Auto-Farm
     _G.AutoFarm = false; _G.FarmDistance = 15; _G.FarmSpeed = 100
-    _G.AutoQuest = true -- Activé par défaut avec l'auto farm
+    _G.AutoQuest = true 
 
     _G.Colors = {
         Main = Color3.fromRGB(150, 0, 255), BG = Color3.fromRGB(10, 10, 10),
@@ -85,7 +72,7 @@ local function StartCheat(expiration)
 
     local cameraRotation = Vector2.new(0, 0)
 
-    -- LOGIQUE AUTO-FARM FONCTIONNELLE
+    -- LOGIQUE AUTO-FARM
     local function EquipFirstItem()
         local bp = LocalPlayer.Backpack:GetChildren()
         local char = LocalPlayer.Character
@@ -110,7 +97,7 @@ local function StartCheat(expiration)
                 local root = v.Parent:FindFirstChild("HumanoidRootPart")
                 if root then
                     local d = (LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude
-                    if d < dist and d < 1000 then -- Scan rayon 1000 pour limiter le lag
+                    if d < dist and d < 1200 then
                         dist = d; target = v.Parent
                     end
                 end
@@ -122,9 +109,10 @@ local function StartCheat(expiration)
     local function TryGetQuest()
         if not _G.AutoQuest then return end
         for _, v in pairs(workspace:GetDescendants()) do
-            if (v.Name:find("Quest") or v.Name:find("Giver")) and v:FindFirstChild("HumanoidRootPart") then
+            -- CHANGEMENT ICI : Uniquement "Quest", on vire "Giver"
+            if v.Name:find("Quest") and v:FindFirstChild("HumanoidRootPart") then
                 local dist = (LocalPlayer.Character.HumanoidRootPart.Position - v.HumanoidRootPart.Position).Magnitude
-                if dist < 100 then
+                if dist < 150 then
                     LocalPlayer.Character.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
                     local vu = game:GetService("VirtualUser")
                     vu:SetKeyDown("e") task.wait(0.1) vu:SetKeyUp("e")
@@ -141,7 +129,6 @@ local function StartCheat(expiration)
     local Main = Instance.new("Frame", ScreenGui); Main.Size = UDim2.new(0, 650, 0, 500); Main.Position = UDim2.new(0.5, -325, 0.5, -250); Main.BackgroundColor3 = _G.Colors.BG; Main.BorderSizePixel = 0; Instance.new("UICorner", Main)
     local MainStroke = Instance.new("UIStroke", Main); MainStroke.Color = _G.Colors.Main; MainStroke.Thickness = 1.5
 
-    -- Fonctions UI (Draggable, Pages, Toggles)
     local function MakeDraggable(frame, parent)
         local dragging, dragInput, dragStart, startPos
         frame.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = parent.Position; input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end)
@@ -188,25 +175,23 @@ local function StartCheat(expiration)
         bg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then local con; con = RunService.RenderStepped:Connect(function() local rel = math.clamp((UserInputService:GetMouseLocation().X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1); fill.Size = UDim2.new(rel, 0, 1, 0); local val = min + (rel * (max - min)); _G[var] = isFloat and (math.floor(val * 100) / 100) or math.floor(val); vL.Text = tostring(_G[var]) end); UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then con:Disconnect() end end) end end)
     end
 
-    -- CREATION DES PAGES
+    -- PAGES
     local Combat = CreatePage("Combat"); AddToggle("Aimbot Active", "Aimbot", Combat); AddSlider("FOV Radius", "FOV_Radius", 10, 800, Combat, false)
     local Visuals = CreatePage("Visuals"); AddToggle("Master ESP", "ESP_Enabled", Visuals); AddToggle("Box ESP", "ESP_Box", Visuals)
     local PlayerP = CreatePage("Player"); AddSlider("WalkSpeed", "WalkSpeed", 16, 250, PlayerP, false); AddToggle("Fly Mode", "FlyEnabled", PlayerP)
     
-    -- PAGE AUTO FARM (MODIFIÉE)
     local AutoFarmPage = CreatePage("Auto Farm")
     AddToggle("Enable Auto Farm", "AutoFarm", AutoFarmPage)
-    AddToggle("Auto Quest Mode", "AutoQuest", AutoFarmPage)
-    AddSlider("Farm Height", "FarmDistance", 5, 30, AutoFarmPage, false)
+    AddToggle("Strict Quest Mode", "AutoQuest", AutoFarmPage)
+    AddSlider("Farm Height", "FarmDistance", 5, 40, AutoFarmPage, false)
 
     Pages["Combat"].Visible = true
 
-    -- BOUCLE PRINCIPALE AUTO FARM + QUEST
+    -- BOUCLE AUTO FARM + QUEST
     task.spawn(function()
         while true do
             task.wait()
             if _G.AutoFarm and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                -- Noclip
                 for _, part in pairs(LocalPlayer.Character:GetChildren()) do
                     if part:IsA("BasePart") then part.CanCollide = false end
                 end
@@ -223,18 +208,16 @@ local function StartCheat(expiration)
                     
                     AutoAttack()
                 else
-                    TryGetQuest() -- Si pas de mob, on va chercher une quete
+                    TryGetQuest() 
                 end
             end
         end
     end)
 
-    -- Fermeture et Inputs
     UserInputService.InputBegan:Connect(function(i) if i.KeyCode == Enum.KeyCode.Insert then Main.Visible = not Main.Visible end end)
-    warn("STAPE HUB ACTIVÉ !")
 end
 
--- [[ LOGIQUE DE VÉRIFICATION RAILWAY ]]
+-- [[ VÉRIFICATION RAILWAY ]]
 local function CheckAccess(inputKey, isAuto)
     if not isAuto then LoginBtn.Text = "Vérification..." end
     local full_url = api_url .. "?key=" .. inputKey .. "&hwid=" .. HWID
@@ -248,7 +231,6 @@ local function CheckAccess(inputKey, isAuto)
     end
 end
 
--- LANCEMENT INITIAL
 local savedKey = GetSavedKey()
 if savedKey then task.spawn(function() CheckAccess(savedKey, true) end) end
 
