@@ -77,7 +77,7 @@ local function StartCheat(expiration)
     _G.FOV_Visible = true; _G.FOV_Radius = 150; _G.Aimbot_Smoothing = 0.4
     _G.ESP_Enabled = false; _G.ESP_Skeleton = false; _G.ESP_Box = false; _G.Trackers_Enabled = false
     _G.FlyEnabled = false; _G.NoClip = false; _G.FreeCam = false; _G.GodMode = false
-    _G.WalkSpeed = 16; _G.RunSpeed = 35; _G.NeoStrafe = false; _G.InfAmmo = false
+    _G.WalkSpeed = 16; _G.RunSpeed = 16; _G.NeoStrafe = false; _G.InfAmmo = false
     _G.RapidFire = false; _G.AutoReload = false; _G.AimbotKey = Enum.KeyCode.E
 
     -- Variables Auto-Farm
