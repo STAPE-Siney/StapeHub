@@ -1,11 +1,12 @@
 -- [[ STAPE HUB - UNIVERSAL V2.5 ]]
 -- Credits: Created by SINEY
--- UPDATED: NEW API SYSTEM (RAILWAY) + AUTO-WAKEUP + HWID LOCK
+-- UPDATED: NEW API SYSTEM (RAILWAY) + AUTO-WAKEUP + HWID LOCK + AUTO-FARM
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService") -- Ajouté pour le Fly Farm
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -71,12 +72,16 @@ local function StartCheat(expiration)
         if LocalPlayer.Character then ApplyRareAura(LocalPlayer.Character) end
     end
 
+    -- Variables Globales
     _G.Aimbot = false; _G.TeamCheck = false; _G.VisibleCheck = true; _G.Prediction = 0.165
     _G.FOV_Visible = true; _G.FOV_Radius = 150; _G.Aimbot_Smoothing = 0.4
     _G.ESP_Enabled = false; _G.ESP_Skeleton = false; _G.ESP_Box = false; _G.Trackers_Enabled = false
     _G.FlyEnabled = false; _G.NoClip = false; _G.FreeCam = false; _G.GodMode = false
     _G.WalkSpeed = 16; _G.RunSpeed = 35; _G.NeoStrafe = false; _G.InfAmmo = false
     _G.RapidFire = false; _G.AutoReload = false; _G.AimbotKey = Enum.KeyCode.E
+
+    -- Variables Auto-Farm
+    _G.AutoFarm = false; _G.FarmDistance = 8; _G.FarmSpeed = 100
 
     _G.Colors = {
         Main = Color3.fromRGB(150, 0, 255), BG = Color3.fromRGB(10, 10, 10),
@@ -85,6 +90,40 @@ local function StartCheat(expiration)
     }
 
     local cameraRotation = Vector2.new(0, 0)
+
+    -- LOGIQUE AUTO-FARM (ITEM + COMBAT)
+    local function EquipFirstItem()
+        local bp = LocalPlayer.Backpack:GetChildren()
+        local char = LocalPlayer.Character
+        if #bp > 0 and not char:FindFirstChildOfClass("Tool") then
+            bp[1].Parent = char
+        end
+    end
+
+    local function AutoAttack()
+        local VirtualUser = game:GetService("VirtualUser")
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(Vector2.new(0,0))
+    end
+
+    local function GetClosestMob()
+        local target = nil
+        local dist = math.huge
+        -- Note : Cette partie scanne tout le workspace pour des mobs (Humanoids)
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("Humanoid") and v.Parent ~= LocalPlayer.Character and v.Health > 0 then
+                local root = v.Parent:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local d = (LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude
+                    if d < dist then
+                        dist = d
+                        target = v.Parent
+                    end
+                end
+            end
+        end
+        return target
+    end
 
     local function IsVisible(part)
         local char = LocalPlayer.Character
@@ -163,15 +202,49 @@ local function StartCheat(expiration)
         b.MouseButton1Click:Connect(function() _G.Colors[role] = Color3.fromHSV(math.random(), 0.7, 1); t.TextColor3 = _G.Colors[role]; if role == "Main" then MainStroke.Color = _G.Colors[role]; Credits.TextColor3 = _G.Colors[role] end end)
     end
 
+    -- PAGES ET ONGLETS
     local Combat = CreatePage("Combat"); AddToggle("Aimbot Active", "Aimbot", Combat); AddToggle("Team Check", "TeamCheck", Combat); AddToggle("Vis Check", "VisibleCheck", Combat); AddSlider("Smoothing", "Aimbot_Smoothing", 0.1, 1, Combat, true); AddSlider("Prediction", "Prediction", 0.01, 0.5, Combat, true); AddSlider("FOV Radius", "FOV_Radius", 10, 800, Combat, false)
     local GunMods = CreatePage("Gun Mods"); AddToggle("Infinite Ammo", "InfAmmo", GunMods); AddToggle("Rapid Fire", "RapidFire", GunMods); AddToggle("Auto Reload", "AutoReload", GunMods)
     local Visuals = CreatePage("Visuals"); AddToggle("Master ESP", "ESP_Enabled", Visuals); AddToggle("Box ESP", "ESP_Box", Visuals); AddToggle("Skeleton ESP", "ESP_Skeleton", Visuals); AddToggle("Trackers", "Trackers_Enabled", Visuals); AddToggle("Show FOV", "FOV_Visible", Visuals)
     local PlayerP = CreatePage("Player"); AddSlider("WalkSpeed", "WalkSpeed", 16, 250, PlayerP, false); AddSlider("RunSpeed", "RunSpeed", 16, 400, PlayerP, false); AddToggle("Fly Mode", "FlyEnabled", PlayerP); AddToggle("No Clip", "NoClip", PlayerP); AddToggle("Free Cam", "FreeCam", PlayerP); AddToggle("God Mode", "GodMode", PlayerP)
+    
+    -- NOUVEL ONGLET AUTO FARM
+    local AutoFarmPage = CreatePage("Auto Farm")
+    AddToggle("Enable Auto Farm", "AutoFarm", AutoFarmPage)
+    AddSlider("Farm Distance", "FarmDistance", 1, 20, AutoFarmPage, false)
+    AddSlider("Fly Speed", "FarmSpeed", 10, 300, AutoFarmPage, false)
+
     local Macros = CreatePage("Macros"); AddToggle("Neo Strafe", "NeoStrafe", Macros)
     local ColorsP = CreatePage("Colors"); AddColorPick("Main Theme", "Main", ColorsP); AddColorPick("FOV Circle", "FOV", ColorsP); AddColorPick("Box ESP", "Box", ColorsP); AddColorPick("Skeleton", "Skeleton", ColorsP); AddColorPick("Trackers", "Tracker", ColorsP)
 
     Pages["Combat"].Visible = true
 
+    -- LOGIQUE AUTO FARM FLY (BOUCLE)
+    task.spawn(function()
+        while true do
+            task.wait()
+            if _G.AutoFarm and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local mob = GetClosestMob()
+                if mob and mob:FindFirstChild("HumanoidRootPart") then
+                    EquipFirstItem()
+                    
+                    local hrp = LocalPlayer.Character.HumanoidRootPart
+                    local targetPos = mob.HumanoidRootPart.CFrame * CFrame.new(0, _G.FarmDistance, 0)
+                    
+                    -- Mouvement Fly Smooth
+                    hrp.CFrame = hrp.CFrame:Lerp(targetPos, 0.1)
+                    hrp.Velocity = Vector3.new(0,0,0) -- Stop Gravity
+                    
+                    -- Regarder le mob pour attaquer
+                    hrp.CFrame = CFrame.lookAt(hrp.Position, mob.HumanoidRootPart.Position)
+                    
+                    AutoAttack()
+                end
+            end
+        end
+    end)
+
+    -- Le reste de tes fonctions ESP et Boucles existantes...
     local function CreateESP(target)
         if target == LocalPlayer then return end
         local Drawings = { Box = Drawing.new("Square"), Tracer = Drawing.new("Line"), Skeleton = {HtoT = Drawing.new("Line"), TtoLA = Drawing.new("Line"), TtoRA = Drawing.new("Line"), TtoLL = Drawing.new("Line"), TtoRL = Drawing.new("Line")} }
@@ -217,7 +290,8 @@ local function StartCheat(expiration)
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then move -= Vector3.new(0,1,0) end
                 Camera.CFrame = Camera.CFrame + (move * speed)
             else if Camera.CameraType ~= Enum.CameraType.Custom then Camera.CameraType = Enum.CameraType.Custom; UserInputService.MouseBehavior = Enum.MouseBehavior.Default end end
-            if not _G.FreeCam then
+            
+            if not _G.FreeCam and not _G.AutoFarm then
                 hum.WalkSpeed = hum.MoveDirection.Magnitude > 0 and _G.RunSpeed or _G.WalkSpeed
                 if _G.FlyEnabled then hrp.Velocity = Vector3.zero; local m = Vector3.zero; if UserInputService:IsKeyDown(Enum.KeyCode.W) then m += Camera.CFrame.LookVector end; if UserInputService:IsKeyDown(Enum.KeyCode.S) then m -= Camera.CFrame.LookVector end; hrp.CFrame += m * 2 end
             end
@@ -248,16 +322,11 @@ end
 -- [[ LOGIQUE DE VÉRIFICATION UNIFIÉE (RAILWAY) ]]
 local function CheckAccess(inputKey, isAuto)
     if not isAuto then LoginBtn.Text = "Vérification..." end
-    
     local full_url = api_url .. "?key=" .. inputKey .. "&hwid=" .. HWID
     local attempts = 0
-    local max_attempts = 2 -- Railway est instantané, pas besoin de bcp d'essais
-    
+    local max_attempts = 2
     while attempts < max_attempts do
-        local success, response = pcall(function()
-            return game:HttpGet(full_url)
-        end)
-        
+        local success, response = pcall(function() return game:HttpGet(full_url) end)
         if success then
             if response == "success" then
                 if not isAuto then SaveKeyLocal(inputKey) end
@@ -272,19 +341,15 @@ local function CheckAccess(inputKey, isAuto)
                 return
             end
         end
-        
         attempts = attempts + 1
         task.wait(2)
     end
-    
     if not isAuto then LoginBtn.Text = "SERVEUR OFFLINE" end
 end
 
 -- [[ LANCEMENT ]]
 local savedKey = GetSavedKey()
-if savedKey then
-    task.spawn(function() CheckAccess(savedKey, true) end)
-end
+if savedKey then task.spawn(function() CheckAccess(savedKey, true) end) end
 
 LoginBtn.MouseButton1Click:Connect(function()
     local inputKey = KeyInput.Text:gsub("%s+", "") 
