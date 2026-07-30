@@ -1,6 +1,6 @@
 -- [[ STAPE HUB - UNIVERSAL V2.5 ]]
 -- Credits: Created by SINEY
--- UPDATED: NEW API SYSTEM (RAILWAY) + AUTO-WAKEUP + HWID LOCK
+-- MODIFIED: NO KEY SYSTEM / DIRECT START
 
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
@@ -8,44 +8,6 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
-
--- [[ CONFIGURATION API ]]
-local api_url = "https://stapebackend-production.up.railway.app/check" -- ⚠️ METS TON LIEN RAILWAY ICI
-local FILE_NAME = "stape_config.json"
-
--- [[ RÉCUPÉRATION DU HWID ]]
-local HWID = game:GetService("RbxAnalyticsService"):GetClientId()
-
--- [[ FONCTIONS DE SAUVEGARDE ]]
-local function SaveKeyLocal(key)
-    local data = {key = key}
-    writefile(FILE_NAME, HttpService:JSONEncode(data))
-end
-
-local function GetSavedKey()
-    if isfile(FILE_NAME) then
-        local success, data = pcall(function() return HttpService:JSONDecode(readfile(FILE_NAME)) end)
-        if success then return data.key end
-    end
-    return nil
-end
-
--- [[ UI DE CONNEXION ]]
-if game:GetService("CoreGui"):FindFirstChild("StapeLogin") then game:GetService("CoreGui").StapeLogin:Destroy() end
-local LoginGui = Instance.new("ScreenGui", game:GetService("CoreGui")); LoginGui.Name = "StapeLogin"
-
-local LoginFrame = Instance.new("Frame", LoginGui)
-LoginFrame.Size = UDim2.new(0, 300, 0, 180); LoginFrame.Position = UDim2.new(0.5, -150, 0.5, -90); LoginFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15); LoginFrame.BorderSizePixel = 0; Instance.new("UICorner", LoginFrame)
-local LoginStroke = Instance.new("UIStroke", LoginFrame); LoginStroke.Color = Color3.fromRGB(150, 0, 255); LoginStroke.Thickness = 2
-
-local LoginTitle = Instance.new("TextLabel", LoginFrame)
-LoginTitle.Size = UDim2.new(1, 0, 0, 40); LoginTitle.Text = "STAPE HUB - LOGIN"; LoginTitle.TextColor3 = Color3.new(1,1,1); LoginTitle.Font = "GothamBold"; LoginTitle.TextSize = 14; LoginTitle.BackgroundTransparency = 1
-
-local KeyInput = Instance.new("TextBox", LoginFrame)
-KeyInput.Size = UDim2.new(0, 240, 0, 35); KeyInput.Position = UDim2.new(0.5, -120, 0.4, 0); KeyInput.PlaceholderText = "Entrez votre clé..."; KeyInput.Text = ""; KeyInput.BackgroundColor3 = Color3.fromRGB(25, 25, 25); KeyInput.TextColor3 = Color3.new(1,1,1); KeyInput.Font = "Gotham"; KeyInput.TextSize = 12; Instance.new("UICorner", KeyInput)
-
-local LoginBtn = Instance.new("TextButton", LoginFrame)
-LoginBtn.Size = UDim2.new(0, 240, 0, 35); LoginBtn.Position = UDim2.new(0.5, -120, 0.7, 0); LoginBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 200); LoginBtn.Text = "VÉRIFIER"; LoginBtn.TextColor3 = Color3.new(1,1,1); LoginBtn.Font = "GothamBold"; Instance.new("UICorner", LoginBtn)
 
 -- [[ FONCTION AURA RARE ]]
 local function ApplyRareAura(char)
@@ -62,14 +24,11 @@ local function ApplyRareAura(char)
 end
 
 -- [[ LANCEMENT DU CHEAT ]]
-local function StartCheat(expiration)
-    if LoginGui then LoginGui:Destroy() end
+local function StartCheat()
     print("Access Granted! Welcome, " .. LocalPlayer.Name)
 
-    if expiration == 9999999999 then
-        LocalPlayer.CharacterAdded:Connect(ApplyRareAura)
-        if LocalPlayer.Character then ApplyRareAura(LocalPlayer.Character) end
-    end
+    LocalPlayer.CharacterAdded:Connect(ApplyRareAura)
+    if LocalPlayer.Character then ApplyRareAura(LocalPlayer.Character) end
 
     _G.Aimbot = false; _G.TeamCheck = false; _G.VisibleCheck = true; _G.Prediction = 0.165
     _G.FOV_Visible = true; _G.FOV_Radius = 150; _G.Aimbot_Smoothing = 0.4
@@ -245,52 +204,5 @@ local function StartCheat(expiration)
     UserInputService.InputBegan:Connect(function(i) if i.KeyCode == Enum.KeyCode.Insert then Main.Visible = not Main.Visible end end)
 end
 
--- [[ LOGIQUE DE VÉRIFICATION UNIFIÉE (RAILWAY) ]]
-local function CheckAccess(inputKey, isAuto)
-    if not isAuto then LoginBtn.Text = "Vérification..." end
-    
-    local full_url = api_url .. "?key=" .. inputKey .. "&hwid=" .. HWID
-    local attempts = 0
-    local max_attempts = 2 -- Railway est instantané, pas besoin de bcp d'essais
-    
-    while attempts < max_attempts do
-        local success, response = pcall(function()
-            return game:HttpGet(full_url)
-        end)
-        
-        if success then
-            if response == "success" then
-                if not isAuto then SaveKeyLocal(inputKey) end
-                StartCheat(9999999999) 
-                return
-            elseif response == "mismatch" then
-                if not isAuto then LoginBtn.Text = "PC NON AUTORISÉ !" end
-                return
-            elseif response == "invalid" then
-                if not isAuto then LoginBtn.Text = "CLÉ INVALIDE !" end
-                if isfile(FILE_NAME) then delfile(FILE_NAME) end
-                return
-            end
-        end
-        
-        attempts = attempts + 1
-        task.wait(2)
-    end
-    
-    if not isAuto then LoginBtn.Text = "SERVEUR OFFLINE" end
-end
-
--- [[ LANCEMENT ]]
-local savedKey = GetSavedKey()
-if savedKey then
-    task.spawn(function() CheckAccess(savedKey, true) end)
-end
-
-LoginBtn.MouseButton1Click:Connect(function()
-    local inputKey = KeyInput.Text:gsub("%s+", "") 
-    if inputKey == "" then
-        LoginBtn.Text = "ENTREZ UNE CLÉ !"; wait(2); LoginBtn.Text = "VÉRIFIER"
-        return
-    end
-    CheckAccess(inputKey, false)
-end)
+-- [[ DÉMARRAGE DIRECT ]]
+StartCheat()
